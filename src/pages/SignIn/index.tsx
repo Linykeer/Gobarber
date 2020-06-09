@@ -1,11 +1,21 @@
 import React, { useCallback, useRef } from 'react';
-import { Image, View, ScrollView, KeyboardAvoidingView, Platform, TextInput } from 'react-native';
+import {
+  Image,
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
+  Alert,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
-import { FormHandles } from '@unform/core'
+import { FormHandles } from '@unform/core';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
-import { Form } from '@unform/mobile'
+import { Form } from '@unform/mobile';
+import * as Yup from 'yup';
+import getValidationErrors from '../../utils/getValidationError';
 
 import logoImg from '../../assets/logo.png';
 import {
@@ -15,16 +25,54 @@ import {
   ForgotPasswordText,
   CreateAccountButton,
   CreateAccountButtonText,
-
 } from './styles';
+
+interface SignInFormData {
+  email: string;
+  password: string;
+}
+
 const SignIn: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
   const passwordInputRef = useRef<TextInput>(null);
   const navigation = useNavigation();
 
-  const handleSignIn = useCallback((data: object) => {
-    console.log(data);
-  }, [])
+  const handleSignIn = useCallback(async (data: SignInFormData) => {
+    try {
+      formRef.current?.setErrors({});
+
+      const schema = Yup.object().shape({
+        email: Yup.string()
+          .required('E-mail Obrigatorio')
+          .email('Digite um e-mail valido'),
+        password: Yup.string().required('Senha obrigatória'),
+      });
+      console.log('veio aqui -1');
+      await schema.validate(data, {
+        abortEarly: false,
+      });
+      console.log('veio aqui 3');
+      // await SignIn({
+      //   email: data.email,
+      //   password: data.password,
+      // });
+
+      Alert.alert('Aviso', 'Você foi logado com sucesso');
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errors = getValidationErrors(err);
+
+        formRef.current?.setErrors(errors);
+
+        return;
+      }
+
+      Alert.alert(
+        'Erro na autenticação',
+        'Ocorreu um erro ao fazer login, cheque as credenciais.',
+      );
+    }
+  }, []);
 
   return (
     <>
@@ -47,17 +95,18 @@ const SignIn: React.FC = () => {
                 autoCorrect={false}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                name="Email"
+                name="email"
                 icon="mail"
                 placeholder="E-mail"
                 returnKeyType="next"
                 onSubmitEditing={() => {
-
+                  console.log('chamou aqui');
+                  passwordInputRef.current?.focus();
                 }}
               />
               <Input
                 ref={passwordInputRef}
-                name="Password"
+                name="password"
                 icon="lock"
                 placeholder="Senha"
                 secureTextEntry
@@ -73,9 +122,9 @@ const SignIn: React.FC = () => {
                 }}
               >
                 Entrar
-          </Button>
+              </Button>
             </Form>
-            <ForgotPassword onPress={() => { }}>
+            <ForgotPassword onPress={() => {}}>
               <ForgotPasswordText>Esqueci minha senha</ForgotPasswordText>
             </ForgotPassword>
           </Container>

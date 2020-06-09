@@ -1,5 +1,11 @@
-import React, { useRef } from 'react';
-import { Image, View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import {
+  Image,
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
 import Input from '../../components/Input';
@@ -12,11 +18,62 @@ import {
   Title,
   BacktoSignIn,
   BacktoSignInText,
-
+  TextInput,
+  Alert,
 } from './styles';
+import * as Yup from 'yup';
+import api from '../../services/api';
+
+import getValidationErrors from '../../utils/getValidationError';
+interface SignUpFormData {
+  name: string;
+  email: string;
+  password: string;
+}
 const SignUp: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
   const navigation = useNavigation();
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const handleSignUp = useCallback(async (data: SignUpFormData) => {
+    try {
+      formRef.current?.setErrors({});
+
+      const schema = Yup.object().shape({
+        name: Yup.string().required('nome obrigatorio'),
+        email: Yup.string()
+          .required('E-mail Obrigatorio')
+          .email('Digite um e-mail valido'),
+        password: Yup.string().min(6, 'No minimo 6 digitos'),
+      });
+      await schema.validate(data, {
+        abortEarly: false,
+      });
+      // await SignIn({
+      //   email: data.email,
+      //   password: data.password,
+      // });
+      await api.post('/users', data);
+
+      Alert.alert('Cadastro Realizado com Sucesso');
+      navigation.goBack();
+      Alert.alert('Aviso', 'Você foi logado com sucesso');
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errors = getValidationErrors(err);
+
+        formRef.current?.setErrors(errors);
+
+        return;
+      }
+
+      Alert.alert(
+        'Erro no Cadastro',
+        'Ocorreu um erro ao fazer cadastro, cheque as credenciais.',
+      );
+    }
+  }, []);
+
   return (
     <>
       <KeyboardAvoidingView
@@ -33,22 +90,45 @@ const SignUp: React.FC = () => {
             <View>
               <Title>Crie sua conta</Title>
             </View>
-            <Form ref={formRef}
-              onSubmit={(data) => {
-                console.log(data);
-              }}>
-              <Input name="name" icon="user" placeholder="Usuario" />
-              <Input name="Email" icon="mail" placeholder="E-mail" />
-              <Input name="Password" icon="lock" placeholder="Senha" />
+            <Form ref={formRef} onSubmit={handleSignUp}>
+              <Input
+                autoCapitalize="words"
+                name="name"
+                icon="user"
+                placeholder="Usuario"
+                returnKeyType="next"
+                onSubmitEditing={() => emailInputRef.current?.focus()}
+              />
+              <Input
+                ref={emailInputRef}
+                keyboardType="email-address"
+                autoCorrect={false}
+                autoCapitalize="none"
+                name="email"
+                icon="mail"
+                placeholder="E-mail"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
+              />
+              <Input
+                ref={passwordInputRef}
+                secureTextEntry
+                name="password"
+                icon="lock"
+                placeholder="Senha"
+                textContentType="newPassword"
+                returnKeyType="send"
+                onSubmitEditing={() => formRef.current?.submitForm()}
+              />
 
               <Button onPress={() => formRef.current?.submitForm()}>
                 Cadastrar
-          </Button>
+              </Button>
             </Form>
           </Container>
         </ScrollView>
       </KeyboardAvoidingView>
-      <BacktoSignIn onPress={() => navigation.goBack('SignIn')} >
+      <BacktoSignIn onPress={() => navigation.goBack('SignIn')}>
         <Icon name="arrow-left" size={20} color="#fff" />
         <BacktoSignInText>Voltar Para Logon</BacktoSignInText>
       </BacktoSignIn>
@@ -57,4 +137,3 @@ const SignUp: React.FC = () => {
 };
 
 export default SignUp;
-
