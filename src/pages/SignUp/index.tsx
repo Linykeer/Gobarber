@@ -5,6 +5,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
@@ -13,14 +15,7 @@ import Button from '../../components/Button';
 import { Form } from '@unform/mobile';
 import { FormHandles } from '@unform/core';
 import logoImg from '../../assets/logo.png';
-import {
-  Container,
-  Title,
-  BacktoSignIn,
-  BacktoSignInText,
-  TextInput,
-  Alert,
-} from './styles';
+import { Container, Title, BacktoSignIn, BacktoSignInText } from './styles';
 import * as Yup from 'yup';
 import api from '../../services/api';
 
@@ -35,44 +30,41 @@ const SignUp: React.FC = () => {
   const navigation = useNavigation();
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
-  const handleSignUp = useCallback(async (data: SignUpFormData) => {
-    try {
-      formRef.current?.setErrors({});
+  const handleSignUp = useCallback(
+    async (data: SignUpFormData) => {
+      try {
+        formRef.current?.setErrors({});
 
-      const schema = Yup.object().shape({
-        name: Yup.string().required('nome obrigatorio'),
-        email: Yup.string()
-          .required('E-mail Obrigatorio')
-          .email('Digite um e-mail valido'),
-        password: Yup.string().min(6, 'No minimo 6 digitos'),
-      });
-      await schema.validate(data, {
-        abortEarly: false,
-      });
-      // await SignIn({
-      //   email: data.email,
-      //   password: data.password,
-      // });
-      await api.post('/users', data);
+        const schema = Yup.object().shape({
+          name: Yup.string().required('nome obrigatorio'),
+          email: Yup.string()
+            .required('E-mail Obrigatorio')
+            .email('Digite um e-mail valido'),
+          password: Yup.string().min(6, 'No minimo 6 digitos'),
+        });
+        await schema.validate(data, {
+          abortEarly: false,
+        });
+        await api.post('/users', data);
+        Alert.alert('Cadastro Realizado com Sucesso');
+        navigation.goBack();
+      } catch (err) {
+        if (err instanceof Yup.ValidationError) {
+          const errors = getValidationErrors(err);
 
-      Alert.alert('Cadastro Realizado com Sucesso');
-      navigation.goBack();
-      Alert.alert('Aviso', 'Você foi logado com sucesso');
-    } catch (err) {
-      if (err instanceof Yup.ValidationError) {
-        const errors = getValidationErrors(err);
+          formRef.current?.setErrors(errors);
 
-        formRef.current?.setErrors(errors);
+          return;
+        }
 
-        return;
+        Alert.alert(
+          'Erro no Cadastro',
+          'Ocorreu um erro ao fazer cadastro, cheque as credenciais.',
+        );
       }
-
-      Alert.alert(
-        'Erro no Cadastro',
-        'Ocorreu um erro ao fazer cadastro, cheque as credenciais.',
-      );
-    }
-  }, []);
+    },
+    [navigation],
+  );
 
   return (
     <>
@@ -97,7 +89,9 @@ const SignUp: React.FC = () => {
                 icon="user"
                 placeholder="Usuario"
                 returnKeyType="next"
-                onSubmitEditing={() => emailInputRef.current?.focus()}
+                onSubmitEditing={() => {
+                  emailInputRef.current?.focus();
+                }}
               />
               <Input
                 ref={emailInputRef}
@@ -108,7 +102,9 @@ const SignUp: React.FC = () => {
                 icon="mail"
                 placeholder="E-mail"
                 returnKeyType="next"
-                onSubmitEditing={() => passwordInputRef.current?.focus()}
+                onSubmitEditing={() => {
+                  passwordInputRef.current?.focus();
+                }}
               />
               <Input
                 ref={passwordInputRef}
@@ -127,11 +123,11 @@ const SignUp: React.FC = () => {
             </Form>
           </Container>
         </ScrollView>
+        <BacktoSignIn onPress={() => navigation.navigate('SignIn')}>
+          <Icon name="arrow-left" size={20} color="#fff" />
+          <BacktoSignInText>Voltar Para Logon</BacktoSignInText>
+        </BacktoSignIn>
       </KeyboardAvoidingView>
-      <BacktoSignIn onPress={() => navigation.goBack('SignIn')}>
-        <Icon name="arrow-left" size={20} color="#fff" />
-        <BacktoSignInText>Voltar Para Logon</BacktoSignInText>
-      </BacktoSignIn>
     </>
   );
 };
